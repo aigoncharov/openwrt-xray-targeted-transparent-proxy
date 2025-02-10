@@ -1,6 +1,6 @@
 # openwrt-xray-targeted-transparent-proxy
 
-Created a transparent xray proxy only for specific clients (based on MAC addresses) of an OpenWRT router. Works with convenient subscription URLs!
+Create a transparent xray proxy only for specific clients (based on MAC addresses) of an OpenWRT router. Works with convenient subscription URLs!
 It helps you redirect traffic from your dumb devices (think TV) to xray while not affecting the rest of the network.
 
 ## Install
