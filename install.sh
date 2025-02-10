@@ -11,7 +11,7 @@ if [ ! -f "$LEASES_FILE" ]; then
   exit 1
 fi
 
-echo "Here is the list of IP addresses with associated MAC addresses:\n"
+echo "Here is the list of IP addresses with associated MAC addresses:"
 # Output the list of IP addresses with associated MAC addresses
 awk '{print $3, $2}' "$LEASES_FILE"
 
@@ -19,9 +19,19 @@ awk '{print $3, $2}' "$LEASES_FILE"
 read -p "Enter a list of selected MAC addresses separated by comma: " mac_addresses
 
 # Convert the input string to an array
-IFS=',' read -r -a mac_array <<< "$mac_addresses"
+if [ -z "$mac_addresses" ]; then
+  echo "No MAC addresses entered!"
+  exit 1
+fi
 
-echo "Your selection:\n"
+# Check if the input contains a comma
+if [[ "$mac_addresses" == *","* ]]; then
+  IFS=',' read -r -a mac_array <<< "$mac_addresses"
+else
+  mac_array=("$mac_addresses")
+fi
+
+echo "Your selection:"
 # Output the list of IP addresses with associated selected MAC addresses
 for mac in "${mac_array[@]}"; do
   awk -v mac="$mac" '$2 == mac {print $3, $2}' "$LEASES_FILE"
@@ -96,17 +106,17 @@ EOF
 
 echo "VLESS config saved to /etc/xray/config.json"
 
-echo "Installing iptables...\n"
+echo "Installing iptables..."
 opkg install iptables-mod-conntrack-extra \
   iptables-mod-extra \
   iptables-mod-filter \
   iptables-mod-tproxy \
   kmod-ipt-nat6 
 
-echo "Installing xray-core...\n"
+echo "Installing xray-core..."
 opkg install xray-core
 
-echo "Installing geoip and geosite...\n"
+echo "Installing geoip and geosite..."
 opkg install v2fly-geoip v2fly-geosite
 
 cat <<EOF > /etc/firewall.xraytproxy
@@ -130,7 +140,7 @@ ip route add local default dev lo table xray
 EOF
 
 for mac in "${mac_array[@]}"; do
-  echo "iptables -t mangle -A XRAY -m mac --mac-source "$mac" -p tcp -j TPROXY --tproxy-mark 1 --on-ip 127.0.0.1 --on-port 12345\n" >> /etc/firewall.xraytproxy
+  echo "iptables -t mangle -A XRAY -m mac --mac-source "$mac" -p tcp -j TPROXY --tproxy-mark 1 --on-ip 127.0.0.1 --on-port 12345" >> /etc/firewall.xraytproxy
 done
 
 cat <<EOF > /etc/config/xray
