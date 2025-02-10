@@ -26,7 +26,9 @@ fi
 
 # Check if the input contains a comma
 if [[ "$mac_addresses" == *","* ]]; then
-  IFS=',' read -r -a mac_array <<< "$mac_addresses"
+    IFS=',' read -r -a mac_array <<EOF
+  $mac_addresses
+  EOF
 else
   mac_array=("$mac_addresses")
 fi
@@ -140,7 +142,7 @@ ip route add local default dev lo table xray
 EOF
 
 for mac in "${mac_array[@]}"; do
-  echo "iptables -t mangle -A XRAY -m mac --mac-source "$mac" -p tcp -j TPROXY --tproxy-mark 1 --on-ip 127.0.0.1 --on-port 12345" >> /etc/firewall.xraytproxy
+  echo "iptables -t mangle -A XRAY -m mac --mac-source '$mac' -p tcp -j TPROXY --tproxy-mark 1 --on-ip 127.0.0.1 --on-port 12345" >> /etc/firewall.xraytproxy
 done
 
 cat <<EOF > /etc/config/xray
