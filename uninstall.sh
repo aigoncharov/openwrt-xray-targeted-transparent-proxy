@@ -1,5 +1,10 @@
 #!/bin/sh
 
+echo "Flushing iptables..."
+iptables -t mangle -D PREROUTING -p all -j XRAY 2>/dev/null
+iptables -t mangle -F XRAY 2>/dev/null
+iptables -t mangle -X XRAY 2>/dev/null
+
 echo "Removing packages..."
 opkg remove xray-core
 opkg remove v2fly-geoip v2fly-geosite

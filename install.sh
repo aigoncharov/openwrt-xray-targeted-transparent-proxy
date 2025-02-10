@@ -121,6 +121,7 @@ opkg install xray-core
 echo "Saving iptables config to /etc/firewall.xraytproxy..."
 cat <<EOF > /etc/firewall.xraytproxy
 # Flush existing XRAY chain to prevent duplicates
+iptables -t mangle -D PREROUTING -p all -j XRAY 2>/dev/null
 iptables -t mangle -F XRAY 2>/dev/null
 iptables -t mangle -X XRAY 2>/dev/null
 iptables -t mangle -N XRAY 2>/dev/null
