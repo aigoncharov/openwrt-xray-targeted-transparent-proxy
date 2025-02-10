@@ -71,6 +71,10 @@ opkg update
 opkg install python3
 
 outbounds=$(python3 v2ray2json.py "$vless_config")
+if [ $? -ne 0 ]; then
+  echo "Failed to convert VLESS config to JSON!"
+  exit 1
+fi
 
 cat <<EOF > /etc/xray/config.json
 {
@@ -114,6 +118,7 @@ echo "Installing xray-core..."
 opkg update
 opkg install xray-core
 
+echo "Saving iptables config to /etc/firewall.xraytproxy..."
 cat <<EOF > /etc/firewall.xraytproxy
 # Flush existing XRAY chain to prevent duplicates
 iptables -t mangle -F XRAY 2>/dev/null
@@ -139,18 +144,34 @@ for mac in $mac_addresses; do
   echo "iptables -t mangle -A XRAY -m mac --mac-source '$mac' -p tcp -j TPROXY --tproxy-mark 1 --on-ip 127.0.0.1 --on-port 12345" >> /etc/firewall.xraytproxy
 done
 
+echo "Saving xray config to /etc/config/xray..."
 cat <<EOF > /etc/config/xray
-TBD
+config xray 'enabled'
+	option enabled '1'
+
+config xray 'config'
+	option confdir '/etc/xray'
+	list conffiles '/etc/xray/config.json'
+	option datadir '/usr/share/xray'
+	option dialer ''
+	option format 'json'
 EOF
 
-cat <<EOF >> /etc/config/firewall
+if ! grep -q "firewall.xraytproxy" /etc/config/firewall; then
+  echo "Updating /etc/config/firewall..."
+  cat <<EOF >> /etc/config/firewall
 config include
-	option	enabled		1
-	option	type		'script'
-	option	path		'/etc/firewall.xraytproxy'
-	option	fw4_compatible	1
+  option	enabled		1
+  option	type		'script'
+  option	path		'/etc/firewall.xraytproxy'
+  option	fw4_compatible	1
 EOF
+fi
 
+echo "Restarting xray..."
 /etc/init.d/xray enable
 /etc/init.d/xray start
+echo "Restarting firewall..."
 /etc/init.d/firewall restart
+
+echo "Done!"
