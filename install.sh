@@ -107,7 +107,7 @@ echo "VLESS config saved to /etc/xray/config.json"
 
 echo "Installing iptables..."
 opkg update
-opkg install iptables
+opkg install iptables \
   iptables-mod-conntrack-extra \
   iptables-mod-extra \
   iptables-mod-filter \
