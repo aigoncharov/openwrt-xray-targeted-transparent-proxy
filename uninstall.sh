@@ -19,6 +19,6 @@ echo "" > /etc/firewall.xraytproxy
 
 echo "Restarting firewall..."
 /etc/init.d/firewall restart
-echo "Removing network..."
+echo "Restarting network..."
 /etc/init.d/network restart
 echo "Done!"
