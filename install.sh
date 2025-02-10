@@ -24,21 +24,6 @@ if [ -z "$mac_addresses" ]; then
   exit 1
 fi
 
-# Check if the input contains a comma
-if [[ "$mac_addresses" == *","* ]]; then
-    IFS=',' read -r -a mac_array <<EOF
-  $mac_addresses
-  EOF
-else
-  mac_array=("$mac_addresses")
-fi
-
-echo "Your selection:"
-# Output the list of IP addresses with associated selected MAC addresses
-for mac in "${mac_array[@]}"; do
-  awk -v mac="$mac" '$2 == mac {print $3, $2}' "$LEASES_FILE"
-done
-
 # Ask user to input the router IP address with a default value
 read -p "Enter the router IP address [Default: 192.168.1.1]: " router_ip
 router_ip=${router_ip:-192.168.1.1}
@@ -54,6 +39,8 @@ if [ -z "$v2less_url" ]; then
   exit 1
 fi
 
+mkdir -p /etc/xray
+
 echo "V2LESS subscription URL set to: $v2less_url"
 echo  "$v2less_url" > /etc/xray/vless_subscription_url
 
@@ -66,6 +53,10 @@ if [ -z "$vless_config" ]; then
   exit 1
 fi
 
+echo "Installing base64..."
+opkg update
+opkg install coreutils-base64
+
 # Decode the V2LESS subscription URL from base64
 vless_config=$(echo "$vless_config" | base64 -d)
 
@@ -75,6 +66,8 @@ if [ -z "$vless_config" ]; then
   exit 1
 fi
 
+echo "Installing python..."
+opkg update
 opkg install python3
 
 outbounds=$(python3 v2ray2json.py "$vless_config")
@@ -109,17 +102,17 @@ EOF
 echo "VLESS config saved to /etc/xray/config.json"
 
 echo "Installing iptables..."
-opkg install iptables-mod-conntrack-extra \
+opkg update
+opkg install iptables
+  iptables-mod-conntrack-extra \
   iptables-mod-extra \
   iptables-mod-filter \
   iptables-mod-tproxy \
   kmod-ipt-nat6 
 
 echo "Installing xray-core..."
+opkg update
 opkg install xray-core
-
-echo "Installing geoip and geosite..."
-opkg install v2fly-geoip v2fly-geosite
 
 cat <<EOF > /etc/firewall.xraytproxy
 # Flush existing XRAY chain to prevent duplicates
@@ -135,13 +128,14 @@ iptables -t mangle -A XRAY -d 127.0.0.1 -j RETURN
 iptables -t mangle -A PREROUTING -j XRAY
 
 # Ensure marked packets are handled locally
-ip rule add fwmark 1 table xray
-ip route add local default dev lo table xray
+ip rule add fwmark 1 table 100
+ip route add local default dev lo table 100
 
 # Mark traffic by MAC address
 EOF
 
-for mac in "${mac_array[@]}"; do
+IFS=","
+for mac in $mac_addresses; do
   echo "iptables -t mangle -A XRAY -m mac --mac-source '$mac' -p tcp -j TPROXY --tproxy-mark 1 --on-ip 127.0.0.1 --on-port 12345" >> /etc/firewall.xraytproxy
 done
 
